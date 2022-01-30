@@ -40,7 +40,10 @@ PLAYER_DICT = {'k': 0, 'd': 0, 'hs': 0, 'tk': 0, 'ek': 0, 'td': 0, 'a': 0, 'fa':
 
 for filename in os.listdir(demo_directory):
     print("loading: " + filename)
-    demo_data_list.append(DemoParser(demofile="resources\\" + filename, demo_id=filename, parse_rate=128).parse())
+    try:
+        demo_data_list.append(DemoParser(demofile="resources\\" + filename, demo_id=filename, parse_rate=128).parse())
+    except Exception:
+        print("Not a .dem file, or otherwise corrupt")
 
 # demo_parser = DemoParser(demofile="resources\demo3.dem", demo_id="d3", parse_rate=128)
 
