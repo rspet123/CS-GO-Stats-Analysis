@@ -7,6 +7,8 @@ import csgo_utils
 
 import pandas as pd
 
+import plotly.express as px
+
 from csgo.parser import DemoParser
 
 import matplotlib.pyplot as plt
@@ -22,47 +24,43 @@ import seaborn as sns
 
 from mpl_toolkits.mplot3d import Axes3D
 
+import mplcursors
+
+from tqdm import tqdm
+
 #https://www.kaggle.com/naren3256/kmeans-clustering-and-cluster-visualization-in-3d
 
 #https://flashed.gg/posts/reverse-engineering-hltv-rating/
 
+#https://plotly.com/python/3d-scatter-plots/
+
 #0.0073*KAST + 0.3591*KPR + -0.5329*DPR + 0.2372*Impact + 0.0032*ADR + 0.1587 = Rating 2.0
 
 #2.13*KPR + 0.42*Assist per Round -0.41 ≈ Impact
-
+  
 demo_directory = "resources"
 
-min_rounds = 30
+min_rounds = 16
 
 demo_data_list = []
 
-PLAYER_DICT = {'k': 0, 'd': 0, 'hs': 0, 'tk': 0, 'ek': 0, 'td': 0, 'a': 0, 'fa': 0, 'rd': 0, 'dmg_taken': 0, 'dmg': 0, 'ef': 0, 'eh': 0, 'hsp': 0, 'kd': 0, 'adr': 0, 'kpr': 0, 'e_success':0, 'awp_kills':0}
+PLAYER_DICT = {'k': 0, 'd': 0, 'hs': 0, 'tk': 0, 'ek': 0, 'td': 0, 'a': 0, 'fa': 0, 'rd': 0, 'dmg_taken': 0, 'dmg': 0, 'ef': 0, 'eh': 0, 'hsp': 0, 'kd': 0, 'adr': 0, 'kpr': 0, 'es':0, 'awp_kills':0,'ptc':0,'ft':0,'fs':0,'pf':0,'trd':0,'ctrd':0}
 
-for filename in os.listdir(demo_directory):
+for filename in tqdm(os.listdir(demo_directory)):
     print("loading: " + filename)
     try:
         demo_data_list.append(DemoParser(demofile="resources\\" + filename, demo_id=filename, parse_rate=128).parse())
     except Exception:
         print("Not a .dem file, or otherwise corrupt")
 
-# demo_parser = DemoParser(demofile="resources\demo3.dem", demo_id="d3", parse_rate=128)
-
-# data_df = demo_parser.parse(return_type="df")
-
-# bomb_data = csgo_utils.clean_dat(data_df["bombEvents"])
-# damage_data = csgo_utils.clean_dat(data_df["damages"])
-# flash_data = csgo_utils.clean_dat(data_df["flashes"])
-# grenade_data = csgo_utils.clean_dat(data_df["grenades"])
-# kill_data = csgo_utils.clean_dat(data_df["kills"])
-# round_data = csgo_utils.clean_dat(data_df["rounds"])
-# weapon_fire_data = csgo_utils.clean_dat(data_df["weaponFires"])
 kast_calc = {}
 player_names = {}
 scoreboard = {}
 kill_data = {}
 for match in demo_data_list:
     for match_round in match["gameRounds"]:
-        #round_deaths = []
+        round_deaths = []
+        round_participation = {}
         ct_avg_econ = match_round["ctSpend"] + match_round["ctStartEqVal"]
         t_avg_econ = match_round["tSpend"]+ match_round["tStartEqVal"]
         print("Round #" + str(match_round["roundNum"]) + "------")
@@ -95,6 +93,8 @@ for match in demo_data_list:
                 if  player_names[kill["attackerSteamID"]] not in scoreboard.keys():
                     scoreboard[player_names[kill["attackerSteamID"]]] = PLAYER_DICT.copy()
                 scoreboard[player_names[kill["attackerSteamID"]]]["k"] = scoreboard[player_names[kill["attackerSteamID"]]].get("k",0)+1
+                #Track participation for KAST calculation
+                round_participation[player_names[kill["attackerSteamID"]]] = 1
                 if kill["weapon"] == 'AWP':
                     #Track AWP Kills
                     scoreboard[player_names[kill["attackerSteamID"]]]["awp_kills"] = scoreboard[player_names[kill["attackerSteamID"]]].get("awp_kills",0)+1
@@ -102,8 +102,8 @@ for match in demo_data_list:
                 if  player_names[kill["victimSteamID"]] not in scoreboard.keys():
                     scoreboard[player_names[kill["victimSteamID"]]] = PLAYER_DICT.copy()
                 scoreboard[player_names[kill["victimSteamID"]]]["d"] = scoreboard[player_names[kill["victimSteamID"]]].get("d",0)+1
-                
-                
+                round_deaths.append(player_names[kill["victimSteamID"]])
+
                 #Track Trades
                 if kill["isTrade"]:
                     #Add Trade Kill
@@ -116,9 +116,11 @@ for match in demo_data_list:
                         print("Adding " + kill["playerTradedName"] + " to players")
                         player_names[kill["playerTradedSteamID"]] = kill["playerTradedName"]
                         
-                    if  player_names[kill["playerTradedSteamID"]] not in scoreboard.keys():
+                    if player_names[kill["playerTradedSteamID"]] not in scoreboard.keys():
                         scoreboard[player_names[kill["playerTradedSteamID"]]] = PLAYER_DICT.copy()
                     scoreboard[player_names[kill["playerTradedSteamID"]]]["td"] = scoreboard[player_names[kill["playerTradedSteamID"]]].get("td",0)+1
+                    #Track participation for KAST calculation
+                    round_participation[player_names[kill["playerTradedSteamID"]]] = 1
                 
                 
                 if kill["isFirstKill"]:
@@ -159,6 +161,8 @@ for match in demo_data_list:
                     if  player_names[kill["assisterSteamID"]] not in scoreboard.keys():
                         scoreboard[player_names[kill["assisterSteamID"]]] = PLAYER_DICT.copy()
                     scoreboard[player_names[kill["assisterSteamID"]]]["a"] = scoreboard[player_names[kill["assisterSteamID"]]].get("a",0)+1
+                    #Track participation for KAST calculation
+                    round_participation[player_names[kill["assisterSteamID"]]] = 1
         #Track Rounds played per Player
         if match_round.get("frames",False):
         #T Players
@@ -167,14 +171,28 @@ for match in demo_data_list:
                     player_names[t_player["steamID"]] = t_player["name"]
                 if player_names[t_player["steamID"]] not in scoreboard.keys():
                     scoreboard[player_names[t_player["steamID"]]] = PLAYER_DICT.copy()
+                scoreboard[player_names[t_player["steamID"]]]["trd"] = scoreboard[player_names[t_player["steamID"]]].get("trd",0)+1
                 scoreboard[player_names[t_player["steamID"]]]["rd"] = scoreboard[player_names[t_player["steamID"]]].get("rd",0)+1
+                scoreboard[player_names[t_player["steamID"]]]["team"] = t_player["team"]
+                # KAST Calculation for Survival
+                if player_names[t_player["steamID"]] not in round_deaths:
+                    round_participation[player_names[t_player["steamID"]]] = 1
             #CT Players
             for ct_player in match_round["frames"][0]["ct"]["players"]:
                 if ct_player["steamID"] not in player_names.keys():
                     player_names[ct_player["steamID"]] = ct_player["name"]
                 if player_names[ct_player["steamID"]] not in scoreboard.keys():
                     scoreboard[player_names[ct_player["steamID"]]] = PLAYER_DICT.copy()
+                scoreboard[player_names[ct_player["steamID"]]]["ctrd"] = scoreboard[player_names[ct_player["steamID"]]].get("ctrd",0)+1
                 scoreboard[player_names[ct_player["steamID"]]]["rd"] = scoreboard[player_names[ct_player["steamID"]]].get("rd",0)+1
+                scoreboard[player_names[ct_player["steamID"]]]["team"] = ct_player["team"]
+            # KAST Calculation for Survival
+            if player_names[ct_player["steamID"]] not in round_deaths:
+                round_participation[player_names[ct_player["steamID"]]] = 1
+                
+            for player in round_participation.keys():
+                scoreboard[player]["ptc"] = scoreboard[player].get("ptc",0)+1
+                
         
         #Track Damage
         for damage_event in match_round["damages"]:
@@ -182,6 +200,20 @@ for match in demo_data_list:
                 if damage_event["attackerSteamID"] and damage_event["victimSteamID"]:
                     scoreboard[player_names[damage_event["attackerSteamID"]]]["dmg"] = scoreboard[player_names[damage_event["attackerSteamID"]]].get("dmg",0)+damage_event["hpDamage"]
                     scoreboard[player_names[damage_event["victimSteamID"]]]["dmg_taken"] = scoreboard[player_names[damage_event["victimSteamID"]]].get("dmg_taken",0)+damage_event["hpDamage"]
+        #Track Grenades
+        for nade in match_round["grenades"]:
+            #Track Flashes thrown for flash efficiency
+            if nade["grenadeType"] == "Flashbang":
+                scoreboard[player_names[nade["throwerSteamID"]]]["ft"] = scoreboard[player_names[nade["throwerSteamID"]]].get('ft',0)+1
+        
+        for flash in match_round["flashes"]:
+            #Check for teamflashes
+            if not flash["attackerSide"] == flash["playerSide"]:
+                if flash["attackerSteamID"] not in player_names.keys():
+                    player_names[flash["attackerSteamID"]] = flash["attackerName"]
+                scoreboard[player_names[flash["attackerSteamID"]]]["fs"] = scoreboard[player_names[flash["attackerSteamID"]]].get("fs",0) + flash["flashDuration"]
+                scoreboard[player_names[flash["attackerSteamID"]]]["pf"] = scoreboard[player_names[flash["attackerSteamID"]]].get("pf",0) + 1
+        
         if match_round["winningTeam"]:
             print(match_round["winningTeam"] + " wins!")
 players_to_delete = []
@@ -211,30 +243,45 @@ for player in scoreboard.keys():
     scoreboard[player]["dpr"] = float(scoreboard[player]["d"]) / float(scoreboard[player]["rd"])
     # Entry Success Rate
     try:
-        scoreboard[player]["e_success"] = float(scoreboard[player]["ek"]) / (float(scoreboard[player].get("ek",0))+float(scoreboard[player].get("ef",)))
+        scoreboard[player]["es"] = float(scoreboard[player]["ek"]) / (float(scoreboard[player].get("ek",0))+float(scoreboard[player].get("ef",)))
     except ZeroDivisionError:
         print(player + " never tried to entry, what a coward")
-        scoreboard[player]["e_success"] = 0 #this should be like, -1 or smth, but that ends up weird on the graph
-    # avg entry uccess per round
-    scoreboard[player]["espr"] = float(scoreboard[player]["ek"]) / float(scoreboard[player]["rd"])
+        scoreboard[player]["es"] = 0 #this should be like, -1 or something, but that ends up weird on the graph
+    # avg entry success per t round 
+    scoreboard[player]["espr"] = float(scoreboard[player]["ek"]) / float(scoreboard[player]["trd"])
     # entry attempts
     scoreboard[player]["ea"] = ((scoreboard[player].get("ek",0))+(scoreboard[player].get("ef",0)))
-    # entry attempts per round
-    scoreboard[player]["ear"] = float(scoreboard[player]["ea"]) / float(scoreboard[player]["rd"])
+    # entry attempts per t round
+    scoreboard[player]["ear"] = float(scoreboard[player]["ea"]) / float(scoreboard[player]["trd"])
     # flash assists per round
     scoreboard[player]["far"] = float(scoreboard[player]["fa"]) / float(scoreboard[player]["rd"])
     # combined assists per round
     scoreboard[player]["car"] = float(scoreboard[player]["fa"] + scoreboard[player]["a"]) / float(scoreboard[player]["rd"])
     # support score per round
     # support score is a new metric that basically describes how much a player assists his fellow players per round
-    # 
     scoreboard[player]["scr"] = float(scoreboard[player]["fa"] + scoreboard[player]["a"] + scoreboard[player]["tk"]) / float(scoreboard[player]["rd"])
     # awp kills per round
     scoreboard[player]["akr"] = float(scoreboard[player]["awp_kills"]) / float(scoreboard[player]["rd"])
     # survives
     scoreboard[player]["s"] = scoreboard[player]["rd"] - scoreboard[player]["d"]
+    try:
+        # flash efficiency, players flashed / flash thrown
+        scoreboard[player]["pff"] = scoreboard[player]["pf"] / scoreboard[player]["ft"]
+        # flash efficiency, seconds blinded / flash thrown
+        scoreboard[player]["sff"] = scoreboard[player]["fs"] / scoreboard[player]["ft"]
+    except ZeroDivisionError:
+        print(player + " never threw a flash, that's dumb")
+        scoreboard[player]["sff"] = 0
+        scoreboard[player]["pff"] = 0
     # survives per round
     scoreboard[player]["sr"] = scoreboard[player]["s"] / scoreboard[player]["rd"]
+    # KAST, Kill/Assist/Survive/Traded per round
+    scoreboard[player]["kast"] = (scoreboard[player]["ptc"] / scoreboard[player]["rd"])
+    # IMPACT, HLTV stat used for calculating rating
+    scoreboard[player]["impact"] = 2.13 * scoreboard[player]["kpr"] + (.42 * (scoreboard[player]["a"]/scoreboard[player]["rd"]))-.41
+    # HLTV Rating
+    # TODO, seems broken
+    scoreboard[player]["hltv"] = ((.0073*scoreboard[player]["kast"]) + (.3591 * scoreboard[player]["kpr"]) + (-0.5329 * scoreboard[player]["dpr"]) + (.2372 * scoreboard[player]["impact"]) + (.0032 * scoreboard[player]["adr"]) + .1587)
     # awp kill percent
     try:
         scoreboard[player]["akp"] = float(scoreboard[player]["awp_kills"]) / float(scoreboard[player]["k"])
@@ -246,19 +293,7 @@ for player in players_to_delete:
     del(scoreboard[player])
 df_score = pd.DataFrame.from_dict(scoreboard, orient='index')
 
-sns.set(style = "darkgrid")
+fig = px.scatter_3d(df_score, x = "ear",y="akp",z="scr",color = "adr",size="kast",text = df_score.index, symbol = 'team')
 
-fig = plt.figure()
-
-
-
-role_graph = fig.add_subplot(111, projection = '3d')
-
-role_graph.set_xlabel("Entry Success")
-role_graph.set_ylabel("Support Score")
-role_graph.set_zlabel("AWP Kills per round")
-
-role_graph.scatter(df_score["e_success"], df_score["scr"], df_score["akr"])
-
-plt.show()
-
+fig.show()
+fig.write_html("roles.html")
