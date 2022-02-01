@@ -1,9 +1,4 @@
-import operator
-from typing import Dict, List, Tuple, Union
-
 import os
-
-import csgo_utils
 
 import pandas as pd
 
@@ -12,19 +7,13 @@ import plotly.express as px
 from csgo.parser import DemoParser
 
 import matplotlib.pyplot as plt
+
 import numpy as np
 
 import plotly
 
 from sklearn.cluster import KMeans
 
-import plotly
-
-import seaborn as sns
-
-from mpl_toolkits.mplot3d import Axes3D
-
-import mplcursors
 
 from tqdm import tqdm
 
@@ -55,7 +44,7 @@ if not os.path.exists("demos.kat"):
     for filename in tqdm(os.listdir(demo_directory)):
         print("loading: " + filename)
         try:
-            demo_data_list.append(DemoParser(demofile="resources\\" + filename, demo_id=filename, parse_rate=128).parse())
+            demo_data_list.append(DemoParser(demofile="resources\\" + filename, demo_id=filename,outpath="JSONLogs", parse_rate=128).parse())
         except Exception:
             print("Not a .dem file, or otherwise corrupt")
     #Save our demos json file, it's huge and I don't want to reacquire it on startup every time
@@ -65,7 +54,7 @@ else:
         for filename in tqdm(os.listdir(demo_directory)):
             print("loading: " + filename)
             try:
-                demo_data_list.append(DemoParser(demofile="resources\\" + filename, demo_id=filename, parse_rate=128).parse())
+                demo_data_list.append(DemoParser(demofile="resources\\" + filename, demo_id=filename,outpath="JSONLogs", parse_rate=128).parse())
             except Exception:
                 print("Not a .dem file, or otherwise corrupt")
         #Save our demos json file, it's huge and I don't want to reacquire it on startup every time
