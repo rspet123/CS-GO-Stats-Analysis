@@ -16,7 +16,7 @@ import numpy as np
 
 import plotly
 
-import sklearn
+from sklearn.cluster import KMeans
 
 import plotly
 
@@ -27,6 +27,8 @@ from mpl_toolkits.mplot3d import Axes3D
 import mplcursors
 
 from tqdm import tqdm
+
+import pickle
 
 #https://www.kaggle.com/naren3256/kmeans-clustering-and-cluster-visualization-in-3d
 
@@ -44,14 +46,32 @@ min_rounds = 16
 
 demo_data_list = []
 
-PLAYER_DICT = {'k': 0, 'd': 0, 'hs': 0, 'tk': 0, 'ek': 0, 'td': 0, 'a': 0, 'fa': 0, 'rd': 0, 'dmg_taken': 0, 'dmg': 0, 'ef': 0, 'eh': 0, 'hsp': 0, 'kd': 0, 'adr': 0, 'kpr': 0, 'es':0, 'awp_kills':0,'ptc':0,'ft':0,'fs':0,'pf':0,'trd':0,'ctrd':0}
 
-for filename in tqdm(os.listdir(demo_directory)):
-    print("loading: " + filename)
-    try:
-        demo_data_list.append(DemoParser(demofile="resources\\" + filename, demo_id=filename, parse_rate=128).parse())
-    except Exception:
-        print("Not a .dem file, or otherwise corrupt")
+
+PLAYER_DICT = {'k': 0, 'd': 0, 'hs': 0, 'tk': 0, 'ek': 0, 'td': 0, 'a': 0, 'fa': 0, 'rd': 0, 'dmg_taken': 0, 'dmg': 0, 'ef': 0, 'eh': 0, 'hsp': 0, 'kd': 0, 'adr': 0, 'kpr': 0, 'es':0, 'awp_kills':0,'ptc':0,'ft':0,'fs':0,'pf':0,'trd':0,'ctrd':0}
+demo_ids = os.listdir(demo_directory)
+
+if not os.path.exists("demos.kat"):
+    for filename in tqdm(os.listdir(demo_directory)):
+        print("loading: " + filename)
+        try:
+            demo_data_list.append(DemoParser(demofile="resources\\" + filename, demo_id=filename, parse_rate=128).parse())
+        except Exception:
+            print("Not a .dem file, or otherwise corrupt")
+    #Save our demos json file, it's huge and I don't want to reacquire it on startup every time
+    pickle.dump( (demo_data_list,len(demo_data_list),demo_ids), open( "demos.kat", "wb" ))
+else:
+    if not demo_ids == (pickle.load(open( "demos.kat", "rb" )))[2]:
+        for filename in tqdm(os.listdir(demo_directory)):
+            print("loading: " + filename)
+            try:
+                demo_data_list.append(DemoParser(demofile="resources\\" + filename, demo_id=filename, parse_rate=128).parse())
+            except Exception:
+                print("Not a .dem file, or otherwise corrupt")
+        #Save our demos json file, it's huge and I don't want to reacquire it on startup every time
+        pickle.dump( (demo_data_list,len(demo_data_list),demo_ids), open( "demos.kat", "wb" ))
+    else:
+        demo_data_list = (pickle.load(open("demos.kat", "rb" )))[0]
 
 kast_calc = {}
 player_names = {}
@@ -269,6 +289,8 @@ for player in scoreboard.keys():
         scoreboard[player]["pff"] = scoreboard[player]["pf"] / scoreboard[player]["ft"]
         # flash efficiency, seconds blinded / flash thrown
         scoreboard[player]["sff"] = scoreboard[player]["fs"] / scoreboard[player]["ft"]
+        # flash efficiency, seconds blinded / flash thrown
+        scoreboard[player]["fr"] = scoreboard[player]["ft"] / scoreboard[player]["rd"]
     except ZeroDivisionError:
         print(player + " never threw a flash, that's dumb")
         scoreboard[player]["sff"] = 0
@@ -297,3 +319,41 @@ fig = px.scatter_3d(df_score, x = "ear",y="akp",z="scr",color = "adr",size="kast
 
 fig.show()
 fig.write_html("roles.html")
+
+#KMeans calculation
+
+adj_df_score = pd.DataFrame()
+
+adj_df_score.insert(0,"ear",df_score["ear"]) #X
+
+adj_df_score.insert(1,"akp",df_score["akp"]) #Y
+
+adj_df_score.insert(2,"scr",df_score["scr"]) #Z
+
+sc_arr = adj_df_score.values
+print(sc_arr)
+km = KMeans(n_clusters=5)
+km.fit(sc_arr)
+labels = km.labels_
+
+df_score.insert(42,"class",labels)
+
+fig = px.scatter_3d(df_score, x = "ear",y="akp",z="scr",color = "class",size="kast",text = df_score.index, symbol = 'team')
+
+fig.show()
+fig.write_html("class_kmeans.html")
+
+fig = px.scatter_3d(df_score, x = "adr",y="hsp",z="kd",color = "class",size="kast",text = df_score.index, symbol = 'team')
+
+fig.show()
+fig.write_html("performance.html")
+
+fig = px.scatter_3d(df_score, x = "espr",y="ear",z="scr",color = "class",size="kast",text = df_score.index, symbol = 'team')
+
+fig.show()
+fig.write_html("entry.html")
+
+fig = px.scatter_3d(df_score, x = "fr",y="far",z="sff",color = "class",size="kast",text = df_score.index, symbol = 'team')
+
+fig.show()
+fig.write_html("flash_efficiency.html")
