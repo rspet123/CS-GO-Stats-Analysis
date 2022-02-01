@@ -1,0 +1,9 @@
+csgo==1.0
+matplotlib==3.5.1
+mplcursors==0.5.1
+numpy==1.22.1
+pandas==1.4.0
+plotly==5.5.0
+scikit_learn==1.0.2
+seaborn==0.11.2
+tqdm==4.62.3
