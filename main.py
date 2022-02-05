@@ -19,12 +19,6 @@ from tqdm import tqdm
 
 import pickle
 
-#https://www.kaggle.com/naren3256/kmeans-clustering-and-cluster-visualization-in-3d
-
-#https://flashed.gg/posts/reverse-engineering-hltv-rating/
-
-#https://plotly.com/python/3d-scatter-plots/
-
 #0.0073*KAST + 0.3591*KPR + -0.5329*DPR + 0.2372*Impact + 0.0032*ADR + 0.1587 = Rating 2.0
 
 #2.13*KPR + 0.42*Assist per Round -0.41 ≈ Impact
@@ -37,7 +31,7 @@ demo_data_list = []
 
 
 
-PLAYER_DICT = {'k': 0, 'd': 0, 'hs': 0, 'tk': 0, 'ek': 0, 'td': 0, 'a': 0, 'fa': 0, 'rd': 0, 'dmg_taken': 0, 'dmg': 0, 'ef': 0, 'eh': 0, 'hsp': 0, 'kd': 0, 'adr': 0, 'kpr': 0, 'es':0, 'awp_kills':0,'ptc':0,'ft':0,'fs':0,'pf':0,'trd':0,'ctrd':0}
+PLAYER_DICT = {'k': 0, 'd': 0, 'hs': 0, 'tk': 0, 'ek': 0, 'td': 0, 'a': 0, 'fa': 0, 'rd': 0, 'dmg_taken': 0, 'dmg': 0, 'ef': 0, 'eh': 0, 'hsp': 0, 'kd': 0, 'adr': 0, 'kpr': 0, 'es':0, 'awp_kills':0,'ptc':0,'ft':0,'fs':0,'pf':0,'trd':0,'ctrd':0,'dist':0}
 demo_ids = os.listdir(demo_directory)
 
 if not os.path.exists("demos.kat"):
@@ -102,6 +96,15 @@ for match in demo_data_list:
                 if  player_names[kill["attackerSteamID"]] not in scoreboard.keys():
                     scoreboard[player_names[kill["attackerSteamID"]]] = PLAYER_DICT.copy()
                 scoreboard[player_names[kill["attackerSteamID"]]]["k"] = scoreboard[player_names[kill["attackerSteamID"]]].get("k",0)+1
+                
+                #Track Average Distance
+                scoreboard[player_names[kill["attackerSteamID"]]]["dist"] = scoreboard[player_names[kill["attackerSteamID"]]].get("dist",0)+kill["distance"]
+                
+                #Track Look anglem for viewX, lets give them a 45 degree "aim" cone
+                #attackerViewX
+                #victimViewX
+                #TODO
+                
                 #Track participation for KAST calculation
                 round_participation[player_names[kill["attackerSteamID"]]] = 1
                 if kill["weapon"] == 'AWP':
@@ -235,6 +238,8 @@ for player in scoreboard.keys():
     # Headshot %
     try:
         scoreboard[player]["hsp"] = float(scoreboard[player]["hs"]) / float(scoreboard[player]["k"])
+        #Average Kill Distance
+        scoreboard[player]["akd"] = float(scoreboard[player]["dist"]) / float(scoreboard[player]["k"])
     except ZeroDivisionError:
         print(player + " never got a kill, sad")
         scoreboard[player]["hsp"] = 0
@@ -321,7 +326,7 @@ adj_df_score.insert(2,"scr",df_score["scr"]) #Z
 
 sc_arr = adj_df_score.values
 print(sc_arr)
-km = KMeans(n_clusters=5)
+km = KMeans(n_clusters=4)
 km.fit(sc_arr)
 labels = km.labels_
 
@@ -346,3 +351,13 @@ fig = px.scatter_3d(df_score, x = "fr",y="far",z="sff",color = "class",size="kas
 
 fig.show()
 fig.write_html("flash_efficiency.html")
+
+fig = px.scatter(df_score, x = "dpr",y="akd",color = "class",size="kast",text = df_score.index, trendline="ols")
+
+fig.show()
+fig.write_html("distance_vs_dpr.html")
+
+fig = px.scatter(df_score, x = "akp",y="akd",color = "class",size="kast",text = df_score.index, trendline="ols")
+
+fig.show()
+fig.write_html("awp_vs_distance.html")
