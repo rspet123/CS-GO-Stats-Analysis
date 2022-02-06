@@ -133,7 +133,7 @@ for match in demo_data_list:
                 # a *VERY* rough measure of crosshair placement, a statistic that is hard to quantify
                 scoreboard[player_names[kill["victimSteamID"]]]["afk"] = scoreboard[player_names[kill["victimSteamID"]]].get("afk",0)+anglediff
                 
-                #Track Average Distance of kill
+                #Track Average Distance of death
                 scoreboard[player_names[kill["victimSteamID"]]]["ddist"] = scoreboard[player_names[kill["victimSteamID"]]].get("ddist",0)+kill["distance"]
                 
                 #track advantage at kill time
