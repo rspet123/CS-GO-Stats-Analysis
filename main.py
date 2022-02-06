@@ -14,6 +14,7 @@ import plotly
 
 from sklearn.cluster import KMeans
 
+import csgo_stat_functions
 
 from tqdm import tqdm
 
@@ -31,7 +32,7 @@ demo_data_list = []
 
 
 
-PLAYER_DICT = {'k': 0, 'd': 0, 'hs': 0, 'tk': 0, 'ek': 0, 'td': 0, 'a': 0, 'fa': 0, 'rd': 0, 'dmg_taken': 0, 'dmg': 0, 'ef': 0, 'eh': 0, 'hsp': 0, 'kd': 0, 'adr': 0, 'kpr': 0, 'es':0, 'awp_kills':0,'ptc':0,'ft':0,'fs':0,'pf':0,'trd':0,'ctrd':0,'dist':0}
+PLAYER_DICT = {'k': 0, 'd': 0, 'hs': 0, 'tk': 0, 'ek': 0, 'td': 0, 'a': 0, 'fa': 0, 'rd': 0, 'dmg_taken': 0, 'dmg': 0, 'ef': 0, 'eh': 0, 'hsp': 0, 'kd': 0, 'adr': 0, 'kpr': 0, 'es':0, 'awp_kills':0,'ptc':0,'ft':0,'fs':0,'pf':0,'trd':0,'ctrd':0,'dist':0,'fld':0,'flk':0,'flkr':0,"fldr":0,'afk':0,'aafk':0,'ddd':0,'ddist':0,'awdr':0,'awp_deaths':0,'awdd':0,'aduel':0,'sk':0,'skk':0,'sd':0,'sdd':0,'adv':0,'avadv':0}
 demo_ids = os.listdir(demo_directory)
 
 if not os.path.exists("demos.kat"):
@@ -60,6 +61,7 @@ kast_calc = {}
 player_names = {}
 scoreboard = {}
 kill_data = {}
+flank_angle = 45
 for match in demo_data_list:
     for match_round in match["gameRounds"]:
         round_deaths = []
@@ -84,12 +86,10 @@ for match in demo_data_list:
                     
                 if player_names[kill["attackerSteamID"]] not in kill_data.keys():
                     #Add our kill to the list of a players kills
-                    kill_round = kill
-                    kill_round['round_num'] = match_round["roundNum"]
                     kill_data[player_names[kill["attackerSteamID"]]] = []
-                    kill_data[player_names[kill["attackerSteamID"]]].append(kill_round)
+                    kill_data[player_names[kill["attackerSteamID"]]].append(kill)
                 else:
-                    kill_data[player_names[kill["attackerSteamID"]]].append(kill_round)
+                    kill_data[player_names[kill["attackerSteamID"]]].append(kill)
                     
                 
                 #Track Kills
@@ -97,25 +97,48 @@ for match in demo_data_list:
                     scoreboard[player_names[kill["attackerSteamID"]]] = PLAYER_DICT.copy()
                 scoreboard[player_names[kill["attackerSteamID"]]]["k"] = scoreboard[player_names[kill["attackerSteamID"]]].get("k",0)+1
                 
-                #Track Average Distance
+                #Track Average Distance of kill
                 scoreboard[player_names[kill["attackerSteamID"]]]["dist"] = scoreboard[player_names[kill["attackerSteamID"]]].get("dist",0)+kill["distance"]
                 
-                #Track Look anglem for viewX, lets give them a 45 degree "aim" cone
-                #attackerViewX
-                #victimViewX
-                #TODO
                 
                 #Track participation for KAST calculation
                 round_participation[player_names[kill["attackerSteamID"]]] = 1
-                if kill["weapon"] == 'AWP':
-                    #Track AWP Kills
-                    scoreboard[player_names[kill["attackerSteamID"]]]["awp_kills"] = scoreboard[player_names[kill["attackerSteamID"]]].get("awp_kills",0)+1
+               
                 #Track Deaths
                 if  player_names[kill["victimSteamID"]] not in scoreboard.keys():
                     scoreboard[player_names[kill["victimSteamID"]]] = PLAYER_DICT.copy()
                 scoreboard[player_names[kill["victimSteamID"]]]["d"] = scoreboard[player_names[kill["victimSteamID"]]].get("d",0)+1
                 round_deaths.append(player_names[kill["victimSteamID"]])
-
+                
+                #Track Seconds at kill/death
+                scoreboard[player_names[kill["victimSteamID"]]]["sd"] = scoreboard[player_names[kill["victimSteamID"]]].get("sd",0)+kill['seconds']
+                scoreboard[player_names[kill["attackerSteamID"]]]["sk"] = scoreboard[player_names[kill["attackerSteamID"]]].get("sk",0)+kill['seconds']
+                if kill["weapon"] == 'AWP':
+                    #Track AWP Kills
+                    scoreboard[player_names[kill["attackerSteamID"]]]["awp_kills"] = scoreboard[player_names[kill["attackerSteamID"]]].get("awp_kills",0)+1
+                    scoreboard[player_names[kill["victimSteamID"]]]["awp_deaths"] = scoreboard[player_names[kill["victimSteamID"]]].get("awp_deaths",0)+1
+                #Track Look anglem for viewX, lets give them a 45 degree "aim" cone
+                #attackerViewX
+                #victimViewX
+                #TODO
+                #We want a basic measure of: was the victim looking at the killer, if not, xhair placement can be improved
+                anglediff = abs((((kill["attackerViewX"]) - kill["victimViewX"])%360)-180)
+                if anglediff > flank_angle:
+                    print(kill["victimName"] + " wasn't looking at " + kill["attackerName"])
+                    #FLK, Flank kills
+                    scoreboard[player_names[kill["attackerSteamID"]]]["flk"] = scoreboard[player_names[kill["attackerSteamID"]]].get("flk",0)+1
+                    #FLD, Flank Deaths
+                    scoreboard[player_names[kill["victimSteamID"]]]["fld"] = scoreboard[player_names[kill["victimSteamID"]]].get("fld",0)+1
+                # AFK, Angle From Killer
+                # a *VERY* rough measure of crosshair placement, a statistic that is hard to quantify
+                scoreboard[player_names[kill["victimSteamID"]]]["afk"] = scoreboard[player_names[kill["victimSteamID"]]].get("afk",0)+anglediff
+                
+                #Track Average Distance of kill
+                scoreboard[player_names[kill["victimSteamID"]]]["ddist"] = scoreboard[player_names[kill["victimSteamID"]]].get("ddist",0)+kill["distance"]
+                
+                #track advantage at kill time
+                scoreboard[player_names[kill["attackerSteamID"]]]["adv"] = scoreboard[player_names[kill["attackerSteamID"]]].get("adv",0)+csgo_stat_functions.calculateKillAdvantage(kill, match_round)
+                
                 #Track Trades
                 if kill["isTrade"]:
                     #Add Trade Kill
@@ -134,7 +157,7 @@ for match in demo_data_list:
                     #Track participation for KAST calculation
                     round_participation[player_names[kill["playerTradedSteamID"]]] = 1
                 
-                
+                 
                 if kill["isFirstKill"]:
                     if kill["attackerSide"] == "T":
                         #Track Entries
@@ -240,12 +263,18 @@ for player in scoreboard.keys():
         scoreboard[player]["hsp"] = float(scoreboard[player]["hs"]) / float(scoreboard[player]["k"])
         #Average Kill Distance
         scoreboard[player]["akd"] = float(scoreboard[player]["dist"]) / float(scoreboard[player]["k"])
+        #Average kill time
+        scoreboard[player]["skk"] = float(scoreboard[player]["sk"]) / float(scoreboard[player]["k"])
     except ZeroDivisionError:
         print(player + " never got a kill, sad")
         scoreboard[player]["hsp"] = 0
     # Classic Kill/Death Ratio
     try:
         scoreboard[player]["kd"] = float(scoreboard[player]["k"]) / float(scoreboard[player]["d"])
+        #Average Distance of death
+        scoreboard[player]["ddd"] = float(scoreboard[player]["ddist"]) / float(scoreboard[player]["d"])
+        #Average death time
+        scoreboard[player]["sdd"] = float(scoreboard[player]["sd"]) / float(scoreboard[player]["d"])
     except ZeroDivisionError:
         print(player + " never died, wow")
         scoreboard[player]["kd"] = float(scoreboard[player]["k"])
@@ -261,8 +290,27 @@ for player in scoreboard.keys():
     except ZeroDivisionError:
         print(player + " never tried to entry, what a coward")
         scoreboard[player]["es"] = 0 #this should be like, -1 or something, but that ends up weird on the graph
+    
+    try:
+        #Awp deaths/round
+        scoreboard[player]["awdr"] = float(scoreboard[player]["awp_deaths"]) / float(scoreboard[player]["rd"])
+        #Awp deaths/death
+        scoreboard[player]["awdd"] = float(scoreboard[player]["awp_deaths"]) / float(scoreboard[player]["d"])
+        #Awp Duel winrate
+        scoreboard[player]["aduel"] = float(scoreboard[player]["awp_kills"]) / float(scoreboard[player]["awp_deaths"])
+    except ZeroDivisionError:
+        print(player + " never died to an awper, good for them")
+        scoreboard[player]["awdr"] = 0
+    # Average Advantage per kill
+    scoreboard[player]["avadv"] = float(scoreboard[player]["adv"]) / float(scoreboard[player]["k"])
     # avg entry success per t round 
     scoreboard[player]["espr"] = float(scoreboard[player]["ek"]) / float(scoreboard[player]["trd"])
+    # flank deaths / round
+    scoreboard[player]["fldr"] = float(scoreboard[player]["fld"]) / float(scoreboard[player]["rd"])
+    # flank kills / round
+    scoreboard[player]["flkr"] = float(scoreboard[player]["flk"]) / float(scoreboard[player]["rd"])
+    # average angle from killer
+    scoreboard[player]["aafk"] = float(scoreboard[player]["afk"]) / float(scoreboard[player]["d"])
     # entry attempts
     scoreboard[player]["ea"] = ((scoreboard[player].get("ek",0))+(scoreboard[player].get("ef",0)))
     # entry attempts per t round
@@ -361,3 +409,8 @@ fig = px.scatter(df_score, x = "akp",y="akd",color = "class",size="kast",text = 
 
 fig.show()
 fig.write_html("awp_vs_distance.html")
+
+fig = px.scatter(df_score, x = "aafk",y="dpr",color = "class",size="kast",text = df_score.index, trendline="ols")
+
+fig.show()
+fig.write_html("xhair_placement_vs_deaths.html")
