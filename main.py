@@ -6,6 +6,8 @@ import plotly.express as px
 
 from csgo.parser import DemoParser
 
+#Awpy
+
 import matplotlib.pyplot as plt
 
 import numpy as np
@@ -39,14 +41,48 @@ low_buys = ['Full Eco','Semi Eco']
 full_buys = ['Full Buy','Semi Buy']
 
 
-PLAYER_DICT = {'k': 0, 'd': 0, 'hs': 0, 'tk': 0, 'ek': 0, 'td': 0, 'a': 0, 'fa': 0, 'rd': 0, 'dmg_taken': 0, 'dmg': 0, 'ef': 0, 'eh': 0, 'hsp': 0, 'kd': 0, 'adr': 0, 'kpr': 0, 'es':0, 'awp_kills':0,'ptc':0,'ft':0,'fs':0,'pf':0,'trd':0,'ctrd':0,'dist':0,'fld':0,'flk':0,'flkr':0,"fldr":0,'afk':0,'aafk':0,'ddd':0,'ddist':0,'awdr':0,'awp_deaths':0,'awdd':0,'aduel':0,'sk':0,'skk':0,'sd':0,'sdd':0,'adv':0,'avadv':0,'pk':0,'pkr':0,'sek':0,'asek':0,'ecok':0,'aecok':0,'ecfr':0,'dek':0,'adek':0}
+PLAYER_DICT = {'k': 0, 'd': 0, 'hs': 0, 'tk': 0, 'ek': 0, 'td': 0, 'a': 0, 'fa': 0, 'rd': 0, 'dmg_taken': 0, 'dmg': 0, 'ef': 0, 'eh': 0, 'hsp': 0, 'kd': 0, 'adr': 0, 'kpr': 0, 'es':0, 'awp_kills':0,'ptc':0,'ft':0,'fs':0,'pf':0,'trd':0,'ctrd':0,'dist':0,'fld':0,'flk':0,'flkr':0,"fldr":0,'afk':0,'aafk':0,'ddd':0,'ddist':0,'awdr':0,'awp_deaths':0,'awdd':0,'aduel':0,'sk':0,'skk':0,'sd':0,'sdd':0,'adv':0,'avadv':0,'pk':0,'pkr':0,'sek':0,'asek':0,'ecok':0,'aecok':0,'ecfr':0,'dek':0,'adek':0,"econv":0,"aeconv":0,'econvr':0,'dloss':0,'dlossd':0}
+
+label_list = {"index":"Player",
+              "econvr":"Entry Conversions/Round",
+              "dlossd":"Death/Round Loss",
+              "kast":"Kill/Assist/Survive/Traded %",
+              "adr":"Average Damage/Round",
+              "kd":"Kill/Death",
+              "scr":"Support Rating",
+              "dpr":"Deaths/Round",
+              "sdd":"Average Time Until Death",
+              "ddd":"Average Distance from Killer",
+              "aafk":"Average Angle from Killer",
+              "flkr":"Average Flank Kills/Round",
+              "fldr":"Average Flank Deaths/Round",
+              "skk":"Average Time until Kill",
+              "ear":"Entry Assists/Round",
+              "sff":"Seconds Flashed/Flash",
+              "fr":"Flashes thrown/Round",
+              "far":"Flash Assists/Round",
+              "pff":"Players Flashed/Flash",
+              "hsp":"Headshot Kill%",
+              "espr":"Entry Success/Round",
+              "avadv":"Average Advantage at Kill",
+              "car":"Combined Assists/Round",
+              "aduel":"AWP Kills/AWP Deaths",
+              "asek":"Average Kills with Same Economy",
+              "aecok":"Average Eco Kills",
+              "pkr":"Pistol Kill %",
+              "akd":"Average Kill Distance",
+              "ecfr":"Buy Kills vs Eco Kills",
+              "es":"Entry Success Rate",
+              "team":"Team",
+              "akp":"AWP Kill%"}
+
 demo_ids = os.listdir(demo_directory)
 
 if not os.path.exists("demos.kat"):
     for filename in tqdm(os.listdir(demo_directory)):
         print("loading: " + filename)
         try:
-            demo_data_list.append(DemoParser(demofile="resources\\" + filename, demo_id=filename,outpath="JSONLogs", parse_rate=128).parse())
+            demo_data_list.append(DemoParser(demofile="resources\\" + filename, demo_id=filename,outpath="JSONLogs", parse_rate=128, parse_frames=True).parse())
         except Exception:
             print("Not a .dem file, or otherwise corrupt")
     #Save our demos json file, it's huge and I don't want to reacquire it on startup every time
@@ -106,7 +142,7 @@ for match in demo_data_list:
                 scoreboard[player_names[kill["attackerSteamID"]]]["k"] = scoreboard[player_names[kill["attackerSteamID"]]].get("k",0)+1
                 
                 
-                ############### Economy Calculations###################
+                ############### Economy Calculations ###############
                 #Track kills in the same econ state
                 if econ[kill["attackerSide"]] == econ[kill["victimSide"]]:
                     scoreboard[player_names[kill["attackerSteamID"]]]["sek"] = scoreboard[player_names[kill["attackerSteamID"]]].get("sek",0)+1
@@ -135,6 +171,10 @@ for match in demo_data_list:
                     scoreboard[player_names[kill["victimSteamID"]]] = PLAYER_DICT.copy()
                 scoreboard[player_names[kill["victimSteamID"]]]["d"] = scoreboard[player_names[kill["victimSteamID"]]].get("d",0)+1
                 round_deaths.append(player_names[kill["victimSteamID"]])
+                
+                #Track Death->Loss, IE, how how often a players death causes a round loss, 
+                if match_round['losingTeam'] == kill["victimTeam"]:
+                    scoreboard[player_names[kill["victimSteamID"]]]["dloss"] = scoreboard[player_names[kill["victimSteamID"]]].get("dloss",0)+1
                 
                 #Track Seconds at kill/death
                 scoreboard[player_names[kill["victimSteamID"]]]["sd"] = scoreboard[player_names[kill["victimSteamID"]]].get("sd",0)+kill['seconds']
@@ -190,6 +230,10 @@ for match in demo_data_list:
                         if  player_names[kill["attackerSteamID"]] not in scoreboard.keys():
                             scoreboard[player_names[kill["attackerSteamID"]]] = PLAYER_DICT.copy()
                         scoreboard[player_names[kill["attackerSteamID"]]]["ek"] = scoreboard[player_names[kill["attackerSteamID"]]].get("ek",0)+1
+                        #Track Entry Conversions (AKA, how often an entry kill turns into a round win)
+                        if match_round["winningSide"] == "T":
+                            scoreboard[player_names[kill["attackerSteamID"]]]["econv"] = scoreboard[player_names[kill["attackerSteamID"]]].get("econv",0)+1
+                        
                     elif kill["attackerSide"] == "CT":
                         #Track Entry Holds / Entry Fails
                         if  player_names[kill["attackerSteamID"]] not in scoreboard.keys():
@@ -311,6 +355,8 @@ for player in scoreboard.keys():
         scoreboard[player]["ddd"] = float(scoreboard[player]["ddist"]) / float(scoreboard[player]["d"])
         #Average death time
         scoreboard[player]["sdd"] = float(scoreboard[player]["sd"]) / float(scoreboard[player]["d"])
+        #Death->Round Loss Rate
+        scoreboard[player]["dlossd"] = float(scoreboard[player]["dloss"]) / float(scoreboard[player]["d"])
     except ZeroDivisionError:
         print(player + " never died, wow")
         scoreboard[player]["kd"] = float(scoreboard[player]["k"])
@@ -323,6 +369,10 @@ for player in scoreboard.keys():
     # Entry Success Rate
     try:
         scoreboard[player]["es"] = float(scoreboard[player]["ek"]) / (float(scoreboard[player].get("ek",0))+float(scoreboard[player].get("ef",)))
+        #Entry Conversion Rate (Entry Conversions/Total Entry Kills)
+        scoreboard[player]["aeconv"] = float(scoreboard[player]["econv"]) / float(scoreboard[player].get("ek",0))
+        #Entry Conversion / Round
+        scoreboard[player]["econvr"] = float(scoreboard[player]["econv"]) / float(scoreboard[player].get("rd",0))
     except ZeroDivisionError:
         print(player + " never tried to entry, what a coward")
         scoreboard[player]["es"] = 0 #this should be like, -1 or something, but that ends up weird on the graph
@@ -416,42 +466,48 @@ labels = km.labels_
 
 df_score.insert(42,"class",labels)
 
-fig = px.scatter_3d(df_score, x = "ear",y="akp",z="scr",color = "class",size="kast",text = df_score.index, symbol = 'team')
+fig = px.scatter_3d(df_score, x = "ear",y="akp",z="scr",color = "class",size="kast",text = df_score.index, symbol = 'team',labels=label_list)
 
 fig.show()
 fig.write_html("class_kmeans.html")
 
-fig = px.scatter_3d(df_score, x = "adr",y="hsp",z="kd",color = "class",size="kast",text = df_score.index, symbol = 'team')
+fig = px.scatter_3d(df_score, x = "adr",y="hsp",z="kd",color = "class",size="kast",text = df_score.index, symbol = 'team',labels=label_list)
 
 fig.show()
 fig.write_html("performance.html")
 
-fig = px.scatter_3d(df_score, x = "espr",y="ear",z="scr",color = "class",size="kast",text = df_score.index, symbol = 'team')
+fig = px.scatter_3d(df_score, x = "espr",y="ear",z="econvr",color = "class",size="kast",text = df_score.index, symbol = 'team',labels=label_list)
 
 fig.show()
 fig.write_html("entry.html")
 
-fig = px.scatter_3d(df_score, x = "fr",y="far",z="sff",color = "class",size="kast",text = df_score.index, symbol = 'team')
+fig = px.scatter_3d(df_score, x = "fr",y="far",z="sff",color = "class",size="kast",text = df_score.index, symbol = 'team',labels=label_list)
 
 fig.show()
 fig.write_html("flash_efficiency.html")
 
-fig = px.scatter(df_score, x = "dpr",y="akd",color = "class",size="kast",text = df_score.index, trendline="ols")
+fig = px.scatter(df_score, x = "dpr",y="akd",color = "class",size="kast",text = df_score.index, trendline="ols",labels=label_list)
 
 fig.show()
 fig.write_html("distance_vs_dpr.html")
 
-fig = px.scatter(df_score, x = "akp",y="akd",color = "class",size="kast",text = df_score.index, trendline="ols")
+fig = px.scatter(df_score, x = "akp",y="akd",color = "class",size="kast",text = df_score.index, trendline="ols",labels=label_list)
 
 fig.show()
 fig.write_html("awp_vs_distance.html")
 
-fig = px.scatter(df_score, x = "aafk",y="dpr",color = "class",size="kast",text = df_score.index, trendline="ols")
+fig = px.scatter(df_score, x = "aafk",y="dpr",color = "class",size="kast",text = df_score.index, trendline="ols",labels=label_list)
 
 fig.show()
 fig.write_html("xhair_placement_vs_deaths.html")
 
-fig = px.scatter(df_score, x = "akp",y="pkr",color = "class",size="kast",text = df_score.index, trendline="ols")
+fig = px.scatter(df_score, x = "akr",y="pkr",color = "class",size="kast",text = df_score.index, trendline="ols", labels=label_list)
 
 fig.show()
 fig.write_html("awp_vs_pistol_kills.html")
+
+fig = px.scatter(df_score, x = "econvr",y="dlossd",color = "class",size="kast",text = df_score.index, trendline="ols", labels=label_list)
+
+fig.show()
+fig.write_html("entry_conversions_vs_death_losses.html")
+
