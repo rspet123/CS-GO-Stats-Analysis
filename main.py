@@ -30,7 +30,7 @@ min_rounds = 16
 
 demo_data_list = []
 
-pistols = ['USP-S','Glock-18','P250','Five-SeveN','Tec-9','Desert Eagle','R8 Revolver']
+pistols = ['USP-S','Glock-18','P250','Five-SeveN','Tec-9','Desert Eagle','R8 Revolver','Dual Berettas']
 
 dmg_nades = ["HE Grenade","Molotov","Incendiary Grenade"]
 
@@ -39,7 +39,7 @@ low_buys = ['Full Eco','Semi Eco']
 full_buys = ['Full Buy','Semi Buy']
 
 
-PLAYER_DICT = {'k': 0, 'd': 0, 'hs': 0, 'tk': 0, 'ek': 0, 'td': 0, 'a': 0, 'fa': 0, 'rd': 0, 'dmg_taken': 0, 'dmg': 0, 'ef': 0, 'eh': 0, 'hsp': 0, 'kd': 0, 'adr': 0, 'kpr': 0, 'es':0, 'awp_kills':0,'ptc':0,'ft':0,'fs':0,'pf':0,'trd':0,'ctrd':0,'dist':0,'fld':0,'flk':0,'flkr':0,"fldr":0,'afk':0,'aafk':0,'ddd':0,'ddist':0,'awdr':0,'awp_deaths':0,'awdd':0,'aduel':0,'sk':0,'skk':0,'sd':0,'sdd':0,'adv':0,'avadv':0,'pk':0,'pkr':0,'sek':0,'asek':0,'ecok':0,'aecok':0,'ecfr':0}
+PLAYER_DICT = {'k': 0, 'd': 0, 'hs': 0, 'tk': 0, 'ek': 0, 'td': 0, 'a': 0, 'fa': 0, 'rd': 0, 'dmg_taken': 0, 'dmg': 0, 'ef': 0, 'eh': 0, 'hsp': 0, 'kd': 0, 'adr': 0, 'kpr': 0, 'es':0, 'awp_kills':0,'ptc':0,'ft':0,'fs':0,'pf':0,'trd':0,'ctrd':0,'dist':0,'fld':0,'flk':0,'flkr':0,"fldr":0,'afk':0,'aafk':0,'ddd':0,'ddist':0,'awdr':0,'awp_deaths':0,'awdd':0,'aduel':0,'sk':0,'skk':0,'sd':0,'sdd':0,'adv':0,'avadv':0,'pk':0,'pkr':0,'sek':0,'asek':0,'ecok':0,'aecok':0,'ecfr':0,'dek':0,'adek':0}
 demo_ids = os.listdir(demo_directory)
 
 if not os.path.exists("demos.kat"):
@@ -109,16 +109,14 @@ for match in demo_data_list:
                 ############### Economy Calculations###################
                 #Track kills in the same econ state
                 if econ[kill["attackerSide"]] == econ[kill["victimSide"]]:
-                    print(econ[kill["attackerSide"]])
-                    print(econ[kill["victimSide"]])
-                    print("Same Econ")
                     scoreboard[player_names[kill["attackerSteamID"]]]["sek"] = scoreboard[player_names[kill["attackerSteamID"]]].get("sek",0)+1
                 #Track Eco Frags
                 if (econ[kill["attackerSide"]] in full_buys) and (econ[kill["victimSide"]] in low_buys):
-                    print(econ[kill["attackerSide"]])
-                    print(econ[kill["victimSide"]])
-                    print("Eco Frag!")
                     scoreboard[player_names[kill["attackerSteamID"]]]["ecok"] = scoreboard[player_names[kill["attackerSteamID"]]].get("ecok",0)+1
+                
+                #Track Down Eco Kills
+                if (econ[kill["victimSide"]] in full_buys) and (econ[kill["attackerSide"]] in low_buys):
+                    scoreboard[player_names[kill["attackerSteamID"]]]["dek"] = scoreboard[player_names[kill["attackerSteamID"]]].get("dek",0)+1
                 
                 #Track Pistol Kills
                 if kill['weapon'] in pistols:
@@ -301,6 +299,8 @@ for player in scoreboard.keys():
         scoreboard[player]["pkr"] = float(scoreboard[player]["pk"]) / float(scoreboard[player]["k"])
         # "Ecofragger" Metric
         scoreboard[player]["ecfr"] = float(scoreboard[player]["aecok"]) / float(scoreboard[player]["asek"])
+        # Average kills when down on econ
+        scoreboard[player]["adek"] = float(scoreboard[player]["dek"]) / float(scoreboard[player]["k"])
     except ZeroDivisionError:
         print(player + " never got a kill, sad")
         scoreboard[player]["hsp"] = 0
@@ -450,3 +450,8 @@ fig = px.scatter(df_score, x = "aafk",y="dpr",color = "class",size="kast",text =
 
 fig.show()
 fig.write_html("xhair_placement_vs_deaths.html")
+
+fig = px.scatter(df_score, x = "akp",y="pkr",color = "class",size="kast",text = df_score.index, trendline="ols")
+
+fig.show()
+fig.write_html("awp_vs_pistol_kills.html")
