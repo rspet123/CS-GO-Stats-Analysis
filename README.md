@@ -5,7 +5,7 @@ Angle From Killer: A measure of crosshair placement
 
 Average Advantage Per Kill: A statistic that measures how "useful" a player is, and their impact on the game, advantage is measured based on how many players were alive on each team at the time of the kill, a lower dumber is better, since it denotes that this player can be counted on to even the odds when their team is down players, in a disadvantaged position
 
-Player Class: A (WIP) basic statistic to group players into roles based on how often they entry, awp, and throw utility/otherwise assist their team.
+Player Class: A (WIP) basic statistic to group players into roles based on how often they entry, awp, and throw utility/otherwise assist their team. When creating a players class, we avoid performance based metrics as much as possible, as we would like a BAD entry to be in the same class as a GOOD entry, or vice versa.
 
 A handful of economy based statistics, such as Eco Kill%, and Even Econ Kill%: These show how often a player pads their stats with eco kills, or how well they perform in an equal economic situation.
 
