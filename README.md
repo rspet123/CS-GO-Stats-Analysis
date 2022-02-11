@@ -1,5 +1,5 @@
 # CSGO Stats Analysis
-This is a WIP Python project for analyzing individual CSGO players when provided a demo ( or list of demos), with 70+ statistics on each individual, such as:
+This is a WIP Python project for analyzing individual CSGO players when provided a demo ( or folder of demos), with 70+ statistics on each individual, such as:
 
 Angle From Killer: A measure of crosshair placement, roughly measures how far away from their killer a victim was looking. Shows if they're looking at the right place at the right time. 
 
