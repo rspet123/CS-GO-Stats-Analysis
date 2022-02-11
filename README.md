@@ -1,7 +1,7 @@
 # CSGO Stats Analysis
 This is a WIP Python project for analyzing individual CSGO players when provided a demo ( or list of demos), with 70+ statistics on each individual, such as:
 
-Angle From Killer: A measure of crosshair placement
+Angle From Killer: A measure of crosshair placement, roughly measures how far away from their killer a victim was looking. Shows if they're looking at the right place at the right time. 
 
 Average Advantage Per Kill: A statistic that measures how "useful" a player is, and their impact on the game, advantage is measured based on how many players were alive on each team at the time of the kill, a lower dumber is better, since it denotes that this player can be counted on to even the odds when their team is down players, in a disadvantaged position. 
 
