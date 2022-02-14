@@ -344,8 +344,8 @@ for match in demo_data_list:
             print(match_round["winningTeam"] + " wins!")
 for d_player in player_damages.keys():
     for part in player_damages[d_player].keys():
-        #TODO
-        player_damages[d_player][part] = player_damages[d_player]["Total"]/player_damages[d_player][part]
+        if not part == "Total":
+            player_damages[d_player][part] = player_damages[d_player][part]/player_damages[d_player]["Total"]
 
 players_to_delete = []
 for player in scoreboard.keys():
@@ -470,7 +470,7 @@ for player in scoreboard.keys():
 for player in players_to_delete:
     del(scoreboard[player])
 df_score = pd.DataFrame.from_dict(scoreboard, orient='index')
-
+df_hits = pd.DataFrame.from_dict(player_damages, orient='index')
 fig = px.scatter_3d(df_score, x = "ear",y="akp",z="scr",color = "adr",size="kast",text = df_score.index, symbol = 'team')
 
 fig.show()
