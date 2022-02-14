@@ -14,6 +14,8 @@ import numpy as np
 
 import plotly
 
+import openskill
+
 from sklearn.cluster import KMeans
 
 import csgo_stat_functions
@@ -29,6 +31,10 @@ from multiprocessing import Process
 #2.13*KPR + 0.42*Assist per Round -0.41 ≈ Impact
   
 demo_directory = "resources"
+
+player_damages = {}
+
+damage_area = {}
 
 min_rounds = 16
 
@@ -314,6 +320,12 @@ for match in demo_data_list:
                 if damage_event["attackerSteamID"] and damage_event["victimSteamID"]:
                     scoreboard[player_names[damage_event["attackerSteamID"]]]["dmg"] = scoreboard[player_names[damage_event["attackerSteamID"]]].get("dmg",0)+damage_event["hpDamage"]
                     scoreboard[player_names[damage_event["victimSteamID"]]]["dmg_taken"] = scoreboard[player_names[damage_event["victimSteamID"]]].get("dmg_taken",0)+damage_event["hpDamage"]
+                    
+                    #TODO  
+                    if not player_damages.get(player_names[damage_event["attackerSteamID"]],False):
+                        player_damages[player_names[damage_event["attackerSteamID"]]] = {damage_event["hitGroup"]:1}
+                    player_damages[player_names[damage_event["attackerSteamID"]]][damage_event["hitGroup"]] = player_damages[player_names[damage_event["attackerSteamID"]]].get(damage_event["hitGroup"],0)+1
+                    player_damages[player_names[damage_event["attackerSteamID"]]]["Total"] = player_damages[player_names[damage_event["attackerSteamID"]]].get("Total",0)+1
         #Track Grenades
         for nade in match_round["grenades"]:
             #Track Flashes thrown for flash efficiency
@@ -330,6 +342,11 @@ for match in demo_data_list:
         
         if match_round["winningTeam"]:
             print(match_round["winningTeam"] + " wins!")
+for d_player in player_damages.keys():
+    for part in player_damages[d_player].keys():
+        #TODO
+        player_damages[d_player][part] = player_damages[d_player]["Total"]/player_damages[d_player][part]
+
 players_to_delete = []
 for player in scoreboard.keys():
     # remove players with less than min rounds
