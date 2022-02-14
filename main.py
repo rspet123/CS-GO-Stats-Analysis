@@ -47,8 +47,14 @@ low_buys = ['Full Eco','Semi Eco']
 
 full_buys = ['Full Buy','Semi Buy']
 
+#Head 4x
+#Leg .75x
+#Stomach 1.25x
+#Everything Else 1x
 
-PLAYER_DICT = {'k': 0, 'd': 0, 'hs': 0, 'tk': 0, 'ek': 0, 'td': 0, 'a': 0, 'fa': 0, 'rd': 0, 'dmg_taken': 0, 'dmg': 0, 'ef': 0, 'eh': 0, 'hsp': 0, 'kd': 0, 'adr': 0, 'kpr': 0, 'es':0, 'awp_kills':0,'ptc':0,'ft':0,'fs':0,'pf':0,'trd':0,'ctrd':0,'dist':0,'fld':0,'flk':0,'flkr':0,"fldr":0,'afk':0,'aafk':0,'ddd':0,'ddist':0,'awdr':0,'awp_deaths':0,'awdd':0,'aduel':0,'sk':0,'skk':0,'sd':0,'sdd':0,'adv':0,'avadv':0,'pk':0,'pkr':0,'sek':0,'asek':0,'ecok':0,'aecok':0,'ecfr':0,'dek':0,'adek':0,"econv":0,"aeconv":0,'econvr':0,'dloss':0,'dlossd':0,'dspend':0,'dspk':0}
+DAMAGE_MULT = {'Chest': 1, 'Head': 4, 'Stomach': 1.25, 'LeftLeg': .75, 'LeftArm': 1, 'RightArm': 1, 'Generic': 1, 'RightLeg': .75, 'Neck': 1}
+
+PLAYER_DICT = {'k': 0, 'd': 0, 'hs': 0, 'tk': 0, 'ek': 0, 'td': 0, 'a': 0, 'fa': 0, 'rd': 0, 'dmg_taken': 0, 'dmg': 0, 'ef': 0, 'eh': 0, 'hsp': 0, 'kd': 0, 'adr': 0, 'kpr': 0, 'es':0, 'awp_kills':0,'ptc':0,'ft':0,'fs':0,'pf':0,'trd':0,'ctrd':0,'dist':0,'fld':0,'flk':0,'flkr':0,"fldr":0,'afk':0,'aafk':0,'ddd':0,'ddist':0,'awdr':0,'awp_deaths':0,'awdd':0,'aduel':0,'sk':0,'skk':0,'sd':0,'sdd':0,'adv':0,'avadv':0,'pk':0,'pkr':0,'sek':0,'asek':0,'ecok':0,'aecok':0,'ecfr':0,'dek':0,'adek':0,"econv":0,"aeconv":0,'econvr':0,'dloss':0,'dlossd':0,'dspend':0,'dspk':0,'shf':0,'acc':0}
 
 label_list = {"index":"Player",
               "econvr":"Entry Conversions/Round",
@@ -325,6 +331,9 @@ for match in demo_data_list:
                         player_damages[player_names[damage_event["attackerSteamID"]]] = {damage_event["hitGroup"]:1}
                     player_damages[player_names[damage_event["attackerSteamID"]]][damage_event["hitGroup"]] = player_damages[player_names[damage_event["attackerSteamID"]]].get(damage_event["hitGroup"],0)+1
                     player_damages[player_names[damage_event["attackerSteamID"]]]["Total"] = player_damages[player_names[damage_event["attackerSteamID"]]].get("Total",0)+1
+        for fire in match_round["weaponFires"]:
+            scoreboard[player_names[fire['playerSteamID']]]['shf'] = scoreboard[player_names[fire['playerSteamID']]]['shf'] + 1
+                    
         #Track Grenades
         for nade in match_round["grenades"]:
             #Track Flashes thrown for flash efficiency
@@ -343,9 +352,16 @@ for match in demo_data_list:
             print(match_round["winningTeam"] + " wins!")
 for d_player in player_damages.keys():
     for part in player_damages[d_player].keys():
+        
         if not part == "Total":
+            #Head 4x
+            #Leg .75x
+            #Stomach 1.25x
+            #Everything Else 1x
             player_damages[d_player][part] = player_damages[d_player][part]/player_damages[d_player]["Total"]
-
+            #Average Damage Multiplier
+            scoreboard[d_player]["admult"] = scoreboard[d_player].get("admult",0) + (DAMAGE_MULT[part] * player_damages[d_player][part])
+    scoreboard[d_player]['acc'] = player_damages[d_player]["Total"] / scoreboard[d_player]['shf']
 players_to_delete = []
 for player in scoreboard.keys():
     # remove players with less than min rounds
@@ -540,6 +556,11 @@ fig = px.scatter(df_score, x = "econvr",y="dlossd",color = "class",size="kast",t
 
 fig.show()
 fig.write_html("entry_conversions_vs_death_losses.html")
+
+fig = px.scatter(df_score, x = "admult",y="aafk",color = "class",size="kast",text = df_score.index, trendline="ols", labels=label_list)
+
+fig.show()
+fig.write_html("aim.html")
 
 #Write our dataframes to HTML
 
