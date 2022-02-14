@@ -8,13 +8,12 @@ from csgo.parser import DemoParser
 
 #Awpy
 
-import matplotlib.pyplot as plt
-
-import numpy as np
-
-import plotly
+from pivottablejs import pivot_ui
 
 import openskill
+
+#I would like to do a round based openskill rating
+#But I'm looking at all my options here
 
 from sklearn.cluster import KMeans
 
@@ -24,7 +23,7 @@ from tqdm import tqdm
 
 import pickle
 
-from multiprocessing import Process
+#from multiprocessing import Process
 
 #0.0073*KAST + 0.3591*KPR + -0.5329*DPR + 0.2372*Impact + 0.0032*ADR + 0.1587 = Rating 2.0
 
@@ -440,6 +439,9 @@ for player in scoreboard.keys():
     scoreboard[player]["akr"] = float(scoreboard[player]["awp_kills"]) / float(scoreboard[player]["rd"])
     # survives
     scoreboard[player]["s"] = scoreboard[player]["rd"] - scoreboard[player]["d"]
+    #Add name for pivot table usage
+    scoreboard[player]["name"] = player
+    
     try:
         # flash efficiency, players flashed / flash thrown
         scoreboard[player]["pff"] = scoreboard[player]["pf"] / scoreboard[player]["ft"]
@@ -539,3 +541,10 @@ fig = px.scatter(df_score, x = "econvr",y="dlossd",color = "class",size="kast",t
 fig.show()
 fig.write_html("entry_conversions_vs_death_losses.html")
 
+#Write our dataframes to HTML
+
+pivot_ui(df_score,outfile_path="score_table.html")
+#HTML("score_table.html")
+
+pivot_ui(df_hits,outfile_path='hits_table.html')
+#HTML("hits_table.html")
