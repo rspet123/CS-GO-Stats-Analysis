@@ -10,7 +10,7 @@ from csgo.parser import DemoParser
 
 from pivottablejs import pivot_ui
 
-import openskill
+#import openskill
 
 #I would like to do a round based openskill rating
 #But I'm looking at all my options here
@@ -186,7 +186,8 @@ for match in demo_data_list:
                 round_deaths.append(player_names[kill["victimSteamID"]])
                 
                 #Track Death->Loss, IE, how how often a players death causes a round loss, 
-                if match_round['losingTeam'] == kill["victimTeam"]:
+                if not match_round['winningSide'] == kill["victimSide"]:
+                    print(kill["victimSide"] + " loses")
                     scoreboard[player_names[kill["victimSteamID"]]]["dloss"] = scoreboard[player_names[kill["victimSteamID"]]].get("dloss",0)+1
                 
                 #Track Seconds at kill/death
